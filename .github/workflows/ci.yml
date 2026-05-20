@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  asdf-install-smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install asdf
+        uses: asdf-vm/actions/install@v4
+
+      - name: Install mdsmith latest via asdf plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          expected_version="$({
+            git ls-remote --tags https://github.com/jeduden/mdsmith.git \
+              | awk '{print $2}' \
+              | sed -e 's#^refs/tags/##' -e 's#\^{}##' \
+              | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sed 's/^v//' \
+              | sort -uV \
+              | tail -n1
+          })"
+
+          asdf plugin add mdsmith "$GITHUB_WORKSPACE"
+          asdf install mdsmith latest
+          asdf global mdsmith latest
+
+          resolved_version="$(asdf latest mdsmith)"
+          if [[ "$resolved_version" != "$expected_version" ]]; then
+            echo "Expected latest version '$expected_version' but asdf resolved '$resolved_version'" >&2
+            exit 1
+          fi
+
+          mdsmith_output="$(mdsmith version)"
+          if [[ "$mdsmith_output" != *"$resolved_version"* ]]; then
+            echo "Expected 'mdsmith version' output to contain '$resolved_version', got: $mdsmith_output" >&2
+            exit 1
+          fi

@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+version="${ASDF_INSTALL_VERSION:-${1:-}}"
+download_path="${ASDF_DOWNLOAD_PATH:-${2:-}}"
+
+if [[ -z "${version}" || -z "${download_path}" ]]; then
+  echo "Usage: ASDF_INSTALL_VERSION=<version> ASDF_DOWNLOAD_PATH=<path> $0" >&2
+  exit 1
+fi
+
+version="${version#v}"
+tag="v${version}"
+
+kernel="$(uname -s | tr '[:upper:]' '[:lower:]')"
+arch="$(uname -m)"
+
+case "${kernel}" in
+  linux|darwin) os="${kernel}" ;;
+  msys*|mingw*|cygwin*|windowsnt) os="windows" ;;
+  *)
+    echo "Unsupported operating system: ${kernel}" >&2
+    exit 1
+    ;;
+esac
+
+case "${arch}" in
+  x86_64|amd64) asset_arch="amd64" ;;
+  aarch64|arm64) asset_arch="arm64" ;;
+  *)
+    echo "Unsupported architecture: ${arch}" >&2
+    exit 1
+    ;;
+esac
+
+asset_name="mdsmith-${os}-${asset_arch}"
+if [[ "${os}" == "windows" ]]; then
+  asset_name+=".exe"
+fi
+
+base_url="https://github.com/jeduden/mdsmith/releases/download/${tag}"
+mkdir -p "${download_path}"
+
+curl -fLs "${base_url}/${asset_name}" -o "${download_path}/${asset_name}"
+curl -fLs "${base_url}/checksums.txt" -o "${download_path}/checksums.txt"
