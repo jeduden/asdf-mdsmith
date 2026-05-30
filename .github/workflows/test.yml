@@ -9,10 +9,14 @@ on:
 permissions:
   contents: read
 
-# Exercise the full plugin contract (list-all -> download -> install ->
-# run) against the most recent mdsmith release on every supported OS.
-# macos-latest is arm64 (darwin-arm64), macos-13 is x86_64
-# (darwin-amd64), ubuntu-latest is x86_64 (linux-amd64).
+# asdf is no longer preinstalled on GitHub runners, so this workflow
+# installs it itself and drives the plugin directly — list all -> latest
+# -> install -> run through the generated shim. macos-latest is arm64
+# (darwin-arm64), macos-13 is x86_64 (darwin-amd64), ubuntu-latest is
+# x86_64 (linux-amd64), covering three of the four published binaries.
+env:
+  ASDF_VERSION: "v0.19.0"
+
 jobs:
   plugin_test:
     name: ${{ matrix.os }}
@@ -22,7 +26,50 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, macos-13]
     steps:
-      - name: asdf install mdsmith latest and assert version
-        uses: asdf-vm/actions/plugin-test@v3
-        with:
-          command: 'mdsmith version | grep -E "^mdsmith v[0-9]+\.[0-9]+\.[0-9]+$"'
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Pin a branch HEAD for the local plugin clone
+        # `asdf plugin add <path>` git-clones the checkout; a detached
+        # HEAD (the default for pull_request events) can clone an empty
+        # tree, so anchor HEAD to a branch first.
+        run: git checkout -B asdf-ci-head
+
+      - name: Install asdf ${{ env.ASDF_VERSION }}
+        run: |
+          set -euo pipefail
+          case "$(uname -s)" in
+          Linux) os=linux ;;
+          Darwin) os=darwin ;;
+          *) echo "unsupported OS: $(uname -s)" >&2 && exit 1 ;;
+          esac
+          case "$(uname -m)" in
+          x86_64 | amd64) arch=amd64 ;;
+          arm64 | aarch64) arch=arm64 ;;
+          *) echo "unsupported arch: $(uname -m)" >&2 && exit 1 ;;
+          esac
+          mkdir -p "$HOME/asdf-bin"
+          url="https://github.com/asdf-vm/asdf/releases/download/${ASDF_VERSION}/asdf-${ASDF_VERSION}-${os}-${arch}.tar.gz"
+          echo "Downloading $url"
+          curl -fsSL "$url" | tar -xz -C "$HOME/asdf-bin"
+          echo "$HOME/asdf-bin" >>"$GITHUB_PATH"
+          echo "$HOME/.asdf/shims" >>"$GITHUB_PATH"
+          echo "ASDF_DATA_DIR=$HOME/.asdf" >>"$GITHUB_ENV"
+
+      - name: Install mdsmith via the plugin and assert version
+        run: |
+          set -euo pipefail
+          asdf --version
+          asdf plugin add mdsmith "$GITHUB_WORKSPACE"
+          asdf plugin list
+          asdf list all mdsmith | tr ' ' '\n' | tail -n 3
+          ver="$(asdf latest mdsmith)"
+          echo "latest mdsmith: $ver"
+          asdf install mdsmith "$ver"
+          work="$(mktemp -d)"
+          cd "$work"
+          asdf set mdsmith "$ver"
+          got="$(mdsmith version)"
+          echo "mdsmith version => $got"
+          test "$got" = "mdsmith v${ver}"
+          echo "OK: asdf installed mdsmith $ver and the binary reports it"
