@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+# Download (and checksum-verify) the mdsmith binary for the requested
+# version into $ASDF_DOWNLOAD_PATH. asdf calls this before bin/install.
+
+set -euo pipefail
+
+current_script_path="${BASH_SOURCE[0]}"
+plugin_dir="$(dirname "$(dirname "$current_script_path")")"
+
+# shellcheck source=../lib/utils.bash
+source "${plugin_dir}/lib/utils.bash"
+
+mkdir -p "$ASDF_DOWNLOAD_PATH"
+
+download_release "$ASDF_INSTALL_VERSION" "$ASDF_DOWNLOAD_PATH"

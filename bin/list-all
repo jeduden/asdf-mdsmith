@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+# Print every installable mdsmith version, space-separated and ordered
+# oldest-to-newest, as asdf expects from `asdf list all mdsmith`.
+
+set -euo pipefail
+
+current_script_path="${BASH_SOURCE[0]}"
+plugin_dir="$(dirname "$(dirname "$current_script_path")")"
+
+# shellcheck source=../lib/utils.bash
+source "${plugin_dir}/lib/utils.bash"
+
+list_all_versions | sort_versions | xargs echo

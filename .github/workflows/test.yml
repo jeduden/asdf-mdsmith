@@ -1,0 +1,28 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Exercise the full plugin contract (list-all -> download -> install ->
+# run) against the most recent mdsmith release on every supported OS.
+# macos-latest is arm64 (darwin-arm64), macos-13 is x86_64
+# (darwin-amd64), ubuntu-latest is x86_64 (linux-amd64).
+jobs:
+  plugin_test:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, macos-13]
+    steps:
+      - name: asdf install mdsmith latest and assert version
+        uses: asdf-vm/actions/plugin-test@v3
+        with:
+          command: 'mdsmith version | grep -E "^mdsmith v[0-9]+\.[0-9]+\.[0-9]+$"'

@@ -1,0 +1,8 @@
+# Editor and OS cruft
+.DS_Store
+*.swp
+*~
+
+# Local scratch installs produced while testing the plugin
+/tmp-install/
+/tmp-download/
