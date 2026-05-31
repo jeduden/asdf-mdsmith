@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# Install the binary that bin/download placed (and verified) in
+# $ASDF_DOWNLOAD_PATH into $ASDF_INSTALL_PATH/bin/mdsmith. On any
+# failure the half-written install directory is removed so asdf does
+# not record a broken version.
+
+set -euo pipefail
+
+current_script_path="${BASH_SOURCE[0]}"
+plugin_dir="$(dirname "$(dirname "$current_script_path")")"
+
+# shellcheck source=../lib/utils.bash
+source "${plugin_dir}/lib/utils.bash"
+
+install_mdsmith() {
+	local install_type="$1"
+	local version="$2"
+	local install_path="$3"
+	local bin_path="${install_path}/bin"
+	local binary="${bin_path}/${TOOL_NAME}"
+
+	if [ "$install_type" != "version" ]; then
+		fail "this plugin installs tagged releases only; install type '${install_type}' is unsupported"
+	fi
+
+	mkdir -p "$bin_path"
+	cp "${ASDF_DOWNLOAD_PATH}/${TOOL_NAME}" "$binary"
+	chmod +x "$binary"
+
+	test -x "$binary" || fail "expected ${binary} to be executable"
+	echo "${TOOL_NAME} ${version} installation was successful!"
+}
+
+if ! (install_mdsmith "$ASDF_INSTALL_TYPE" "$ASDF_INSTALL_VERSION" "$ASDF_INSTALL_PATH"); then
+	rm -rf "$ASDF_INSTALL_PATH"
+	exit 1
+fi

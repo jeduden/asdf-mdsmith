@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+# mdsmith installs a single executable into <install>/bin, so that is
+# the only directory asdf needs to expose on PATH for this version.
+
+echo "bin"
