@@ -11,9 +11,10 @@ permissions:
 
 # asdf is no longer preinstalled on GitHub runners, so this workflow
 # installs it itself and drives the plugin directly — list all -> latest
-# -> install -> run through the generated shim. macos-latest is arm64
-# (darwin-arm64), macos-13 is x86_64 (darwin-amd64), ubuntu-latest is
-# x86_64 (linux-amd64), covering three of the four published binaries.
+# -> install -> run through the generated shim. ubuntu-latest covers
+# linux-amd64 and macos-latest (arm64) covers darwin-arm64. GitHub has
+# retired the free Intel-macOS runner, so darwin-amd64 is not
+# runtime-tested here; it is still covered by the release checksum.
 env:
   ASDF_VERSION: "v0.19.0"
 
@@ -24,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, macos-13]
+        os: [ubuntu-latest, macos-latest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
